@@ -379,10 +379,9 @@ const App: React.FC = () => {
     });
 
     setBlockSortDirection(nextDirection);
-    setSortState('Manual');
+    // ソート状態は変更しない（並び替えなので）
     setSelectedItemIds(new Set());
   };
-
   const handleEditRequest = (item: ShoppingItem) => {
     setItemToEdit(item);
     setActiveTab('import');
@@ -769,7 +768,9 @@ const App: React.FC = () => {
       if (!activeEventName) return;
       
       longPressTimeout.current = window.setTimeout(() => {
-        setShowModeMenu(true);
+        // 長押しでモード切り替え
+        handleToggleMode();
+        longPressTimeout.current = null;
       }, 500);
     };
 
@@ -780,6 +781,36 @@ const App: React.FC = () => {
       }
     };
 
+    const handleClick = () => {
+      if (showModeMenu) {
+        setShowModeMenu(false);
+      } else if (onClick) {
+        onClick();
+      } else {
+        setItemToEdit(null);
+        setSelectedItemIds(new Set());
+        setActiveTab(tab);
+      }
+    };
+
+    return (
+      <div className="relative">
+        <button
+          onClick={handleClick}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 whitespace-nowrap ${
+            activeTab === tab
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`}
+        >
+          {label} {typeof count !== 'undefined' && <span className="text-xs bg-slate-200 dark:bg-slate-700 rounded-full px-2 py-0.5 ml-1">{count}</span>}
+        </button>
+      </div>
+    );
+  };
     const handleClick = () => {
       if (showModeMenu) {
         setShowModeMenu(false);
