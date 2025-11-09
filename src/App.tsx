@@ -610,6 +610,7 @@ const App: React.FC = () => {
 
         const block = cells[2]?.trim() || '';
         const number = cells[3]?.trim() || '';
+        // ブロック列とナンバー列の値が入力されているもののみをインポート
         if (!block || !number) continue;
 
         sheetItems.push({
@@ -624,41 +625,67 @@ const App: React.FC = () => {
       }
 
       const currentItems = eventLists[eventName] || [];
-      const sheetItemsMap = new Map(sheetItems.map(item => [getItemKey(item), item]));
-      const currentItemsMap = new Map(currentItems.map(item => [getItemKey(item), item]));
+      
+      // タイトル込みのキーでマップを作成（完全一致用）
+      const sheetItemsMapWithTitle = new Map(sheetItems.map(item => [getItemKey(item), item]));
+      const currentItemsMapWithTitle = new Map(currentItems.map(item => [getItemKey(item), item]));
+      
+      // タイトルなしのキーでマップを作成（タイトル変更検出用）
+      const sheetItemsMapWithoutTitle = new Map(sheetItems.map(item => [getItemKeyWithoutTitle(item), item]));
+      const currentItemsMapWithoutTitle = new Map(currentItems.map(item => [getItemKeyWithoutTitle(item), item]));
 
       const itemsToDelete: ShoppingItem[] = [];
       const itemsToUpdate: ShoppingItem[] = [];
       const itemsToAdd: Omit<ShoppingItem, 'id' | 'purchaseStatus'>[] = [];
+      const processedSheetKeys = new Set<string>();
 
-      // 削除対象
+      // 削除対象: スプレッドシートにないアイテム（サークル名・参加日・ブロック・ナンバーで照合）
       currentItems.forEach(item => {
-        const key = getItemKey(item);
-        if (!sheetItemsMap.has(key)) {
+        const keyWithoutTitle = getItemKeyWithoutTitle(item);
+        if (!sheetItemsMapWithoutTitle.has(keyWithoutTitle)) {
           itemsToDelete.push(item);
         }
       });
 
-      // 更新対象
+      // 更新・追加対象の処理
       sheetItems.forEach(sheetItem => {
-        const key = getItemKey(sheetItem);
-        const existing = currentItemsMap.get(key);
-        if (existing) {
+        const keyWithTitle = getItemKey(sheetItem);
+        const keyWithoutTitle = getItemKeyWithoutTitle(sheetItem);
+        
+        // 完全一致（タイトル込み）で既存アイテムを検索
+        const existingWithTitle = currentItemsMapWithTitle.get(keyWithTitle);
+        if (existingWithTitle) {
+          // 完全一致した場合、価格や備考が変わっていれば更新
           if (
-            existing.title !== sheetItem.title ||
-            existing.price !== sheetItem.price ||
-            existing.remarks !== sheetItem.remarks
+            existingWithTitle.price !== sheetItem.price ||
+            existingWithTitle.remarks !== sheetItem.remarks
           ) {
             itemsToUpdate.push({
-              ...existing,
-              title: sheetItem.title,
+              ...existingWithTitle,
               price: sheetItem.price,
               remarks: sheetItem.remarks
             });
           }
-        } else {
-          itemsToAdd.push(sheetItem);
+          processedSheetKeys.add(keyWithTitle);
+          return;
         }
+        
+        // タイトルなしで既存アイテムを検索（タイトルが変更された場合）
+        const existingWithoutTitle = currentItemsMapWithoutTitle.get(keyWithoutTitle);
+        if (existingWithoutTitle) {
+          // タイトルや価格、備考が変わっていれば更新
+          itemsToUpdate.push({
+            ...existingWithoutTitle,
+            title: sheetItem.title,
+            price: sheetItem.price,
+            remarks: sheetItem.remarks
+          });
+          processedSheetKeys.add(keyWithoutTitle);
+          return;
+        }
+        
+        // 新規追加
+        itemsToAdd.push(sheetItem);
       });
 
       setUpdateData({ itemsToDelete, itemsToUpdate, itemsToAdd });
