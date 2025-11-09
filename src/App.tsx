@@ -630,7 +630,9 @@ const App: React.FC = () => {
       }
 
       const currentItems = eventLists[eventName] || [];
-      const sheetItemsMap = new Map(sheetItems.map(item => [getItemKey(item), item]));
+      const sheetItemsMap = new Map<string, Omit<ShoppingItem, 'id' | 'purchaseStatus'>>(
+        sheetItems.map(item => [getItemKey(item), item])
+      );
       const currentItemsMap = new Map(currentItems.map(item => [getItemKey(item), item]));
 
       const itemsToDelete: ShoppingItem[] = [];
@@ -668,7 +670,11 @@ const App: React.FC = () => {
         }
       });
 
-      setUpdateData({ itemsToDelete, itemsToUpdate, itemsToAdd });
+      setUpdateData({ 
+        itemsToDelete, 
+        itemsToUpdate, 
+        itemsToAdd
+      });
       setShowUpdateConfirmation(true);
 
     } catch (error) {
