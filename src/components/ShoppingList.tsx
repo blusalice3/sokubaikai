@@ -16,9 +16,9 @@ interface ShoppingListProps {
 }
 
 // Constants for drag-and-drop auto-scrolling
-const SCROLL_SPEED = 20; // Speed of scrolling in pixels
-const TOP_SCROLL_TRIGGER_PX = 150; // Trigger zone from the top of the viewport (header/tabs area)
-const BOTTOM_SCROLL_TRIGGER_PX = 100; // Trigger zone from the bottom of the viewport (summary bar area)
+const SCROLL_SPEED = 20;
+const TOP_SCROLL_TRIGGER_PX = 150;
+const BOTTOM_SCROLL_TRIGGER_PX = 100;
 
 const ShoppingList: React.FC<ShoppingListProps> = ({
   items,
@@ -28,16 +28,17 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
   onDeleteRequest,
   selectedItemIds,
   onSelectItem,
-  onMoveToColumn: _onMoveToColumn,
-  onRemoveFromColumn: _onRemoveFromColumn,
+  onMoveToColumn,
+  onRemoveFromColumn,
   columnType,
 }) => {
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
+  const dragOverColumn = useRef<'execute' | 'candidate' | null>(null);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, item: ShoppingItem) => {
     dragItem.current = item.id;
-    const target = e.currentTarget; // Cache target to avoid issues with React event pooling
+    const target = e.currentTarget;
     setTimeout(() => {
         if(target) {
             target.classList.add('opacity-40');
@@ -50,14 +51,14 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, item: ShoppingItem) => {
     e.preventDefault();
-    // Prevent dropping a selection onto itself
     if (selectedItemIds.has(item.id)) {
         dragOverItem.current = null;
     } else {
         dragOverItem.current = item.id;
+        dragOverColumn.current = columnType || null;
     }
   };
-  
+
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     
@@ -71,9 +72,50 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
     }
   };
 
-  const handleDrop = () => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    
+    // 列間の移動を検出
+    const targetColumn = columnType;
+    const sourceColumn = (e.dataTransfer.getData('sourceColumn') || columnType) as 'execute' | 'candidate' | undefined;
+    
     if (dragItem.current !== null && dragOverItem.current !== null && dragItem.current !== dragOverItem.current) {
-      onMoveItem(dragItem.current, dragOverItem.current, columnType);
+      // 同じ列内での移動
+      if (sourceColumn === targetColumn) {
+        onMoveItem(dragItem.current, dragOverItem.current, columnType);
+      } else {
+        // 列間の移動
+        if (selectedItemIds.has(dragItem.current)) {
+          const selectedIds = Array.from(selectedItemIds);
+          if (targetColumn === 'execute' && onMoveToColumn) {
+            onMoveToColumn(selectedIds);
+          } else if (targetColumn === 'candidate' && onRemoveFromColumn) {
+            onRemoveFromColumn(selectedIds);
+          }
+        } else {
+          if (targetColumn === 'execute' && onMoveToColumn) {
+            onMoveToColumn([dragItem.current]);
+          } else if (targetColumn === 'candidate' && onRemoveFromColumn) {
+            onRemoveFromColumn([dragItem.current]);
+          }
+        }
+      }
+    } else if (dragItem.current !== null && targetColumn && sourceColumn && sourceColumn !== targetColumn) {
+      // 列間の移動（アイテム上にドロップしなくても列にドロップした場合は移動）
+      if (selectedItemIds.has(dragItem.current)) {
+        const selectedIds = Array.from(selectedItemIds);
+        if (targetColumn === 'execute' && onMoveToColumn) {
+          onMoveToColumn(selectedIds);
+        } else if (targetColumn === 'candidate' && onRemoveFromColumn) {
+          onRemoveFromColumn(selectedIds);
+        }
+      } else {
+        if (targetColumn === 'execute' && onMoveToColumn) {
+          onMoveToColumn([dragItem.current]);
+        } else if (targetColumn === 'candidate' && onRemoveFromColumn) {
+          onRemoveFromColumn([dragItem.current]);
+        }
+      }
     }
   };
 
@@ -82,20 +124,97 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
     document.querySelectorAll('[data-is-selected="true"]').forEach(el => el.classList.remove('opacity-40'));
     dragItem.current = null;
     dragOverItem.current = null;
+    dragOverColumn.current = null;
+    e.dataTransfer.clearData();
   };
 
   if (items.length === 0) {
-      return <div className="text-center text-slate-500 dark:text-slate-400 py-12">この日のアイテムはありません。</div>
+      return (
+        <div 
+          className="text-center text-slate-500 dark:text-slate-400 py-12 min-h-[200px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('bg-blue-50', 'dark:bg-blue-900/20');
+          }}
+          onDragLeave={(e) => {
+            e.currentTarget.classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
+            const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
+            if (columnType && sourceColumn && sourceColumn !== columnType) {
+              const dragId = dragItem.current;
+              if (dragId) {
+                if (selectedItemIds.has(dragId)) {
+                  const selectedIds = Array.from(selectedItemIds);
+                  if (columnType === 'execute' && onMoveToColumn) {
+                    onMoveToColumn(selectedIds);
+                  } else if (columnType === 'candidate' && onRemoveFromColumn) {
+                    onRemoveFromColumn(selectedIds);
+                  }
+                } else {
+                  if (columnType === 'execute' && onMoveToColumn) {
+                    onMoveToColumn([dragId]);
+                  } else if (columnType === 'candidate' && onRemoveFromColumn) {
+                    onRemoveFromColumn([dragId]);
+                  }
+                }
+              }
+            }
+          }}
+        >
+          この日のアイテムはありません。
+          {columnType && <div className="text-xs mt-2">他の列からアイテムをドラッグ&ドロップできます</div>}
+        </div>
+      );
   }
 
   return (
-    <div className="space-y-4 pb-24">
+    <div 
+      className="space-y-4 pb-24"
+      onDragOver={(e) => {
+        if (e.currentTarget === e.target) {
+          e.preventDefault();
+        }
+      }}
+      onDrop={(e) => {
+        if (e.currentTarget === e.target) {
+          e.preventDefault();
+          const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
+          if (columnType && sourceColumn && sourceColumn !== columnType) {
+            const dragId = dragItem.current;
+            if (dragId) {
+              if (selectedItemIds.has(dragId)) {
+                const selectedIds = Array.from(selectedItemIds);
+                if (columnType === 'execute' && onMoveToColumn) {
+                  onMoveToColumn(selectedIds);
+                } else if (columnType === 'candidate' && onRemoveFromColumn) {
+                  onRemoveFromColumn(selectedIds);
+                }
+              } else {
+                if (columnType === 'execute' && onMoveToColumn) {
+                  onMoveToColumn([dragId]);
+                } else if (columnType === 'candidate' && onRemoveFromColumn) {
+                  onRemoveFromColumn([dragId]);
+                }
+              }
+            }
+          }
+        }
+      }}
+    >
       {items.map((item, index) => (
         <div
           key={item.id}
           data-item-id={item.id}
           draggable
-          onDragStart={(e) => handleDragStart(e, item)}
+          onDragStart={(e) => {
+            handleDragStart(e, item);
+            if (columnType) {
+              e.dataTransfer.setData('sourceColumn', columnType);
+            }
+          }}
           onDragEnter={(e) => handleDragEnter(e, item)}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
