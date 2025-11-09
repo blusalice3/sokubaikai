@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import TrashIcon from './icons/TrashIcon';
 
@@ -17,28 +18,12 @@ const DocumentArrowDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
   </svg>
 );
 
-const ArrowPathIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    fill="none" 
-    viewBox="0 0 24 24" 
-    strokeWidth={1.5} 
-    stroke="currentColor" 
-    {...props}>
-    <path 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" 
-    />
-  </svg>
-);
-
 interface EventListScreenProps {
   eventNames: string[];
   onSelect: (name: string) => void;
   onDelete: (name: string) => void;
   onExport: (name: string) => void;
-  onUpdate: (name: string) => void;
+  onUpdate?: (name: string) => void;
 }
 
 const EventListScreen: React.FC<EventListScreenProps> = ({ eventNames, onSelect, onDelete, onExport, onUpdate }) => {
@@ -46,12 +31,13 @@ const EventListScreen: React.FC<EventListScreenProps> = ({ eventNames, onSelect,
   const [menuVisibleFor, setMenuVisibleFor] = useState<string | null>(null);
 
   const handlePointerDown = (eventName: string) => {
+    // Clear any existing menu
     if (menuVisibleFor !== eventName) {
         setMenuVisibleFor(null);
     }
     longPressTimeout.current = window.setTimeout(() => {
       setMenuVisibleFor(eventName);
-    }, 500);
+    }, 500); // 500ms for long press
   };
 
   const handlePointerUp = () => {
@@ -119,18 +105,18 @@ const EventListScreen: React.FC<EventListScreenProps> = ({ eventNames, onSelect,
                 {menuVisibleFor !== name && <span className="text-xs text-slate-400">クリックで開く / 長押しでメニュー</span>}
               </div>
                {menuVisibleFor === name && (
-                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex bg-white dark:bg-slate-900 rounded-md shadow-lg z-10 border border-slate-200 dark:border-slate-700 divide-x divide-slate-200 dark:divide-slate-700">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onUpdate(name); setMenuVisibleFor(null); }}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/50 rounded-l-md transition-colors"
-                        title="スプレッドシートから更新"
-                    >
-                        <ArrowPathIcon className="w-4 h-4" />
-                        <span>アイテム更新</span>
-                    </button>
+                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex bg-white dark:bg-slate-900 rounded-md shadow-lg z-10 border border-slate-200 dark:border-slate-700 divide-x divide-slate-200 dark:border-slate-700">
+                    {onUpdate && (
+                      <button 
+                          onClick={(e) => { e.stopPropagation(); onUpdate(name); setMenuVisibleFor(null); }}
+                          className="flex items-center space-x-2 px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/50 rounded-l-md transition-colors"
+                      >
+                          <span>🔄 更新</span>
+                      </button>
+                    )}
                     <button 
                         onClick={(e) => { e.stopPropagation(); onExport(name); setMenuVisibleFor(null); }}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors"
+                        className={`flex items-center space-x-2 px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors ${onUpdate ? '' : 'rounded-l-md'}`}
                     >
                         <DocumentArrowDownIcon className="w-4 h-4" />
                         <span>Excel形式で出力</span>
