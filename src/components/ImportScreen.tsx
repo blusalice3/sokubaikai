@@ -129,7 +129,8 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
         const circle = circlesArr[i] || '';
         const block = blocksArr[i] || '';
         const number = numbersArr[i] || '';
-        if (!circle && !block && !number && !titlesArr[i]) {
+        // ブロック列とナンバー列の値が入力されているもののみをインポート
+        if (!block || !number) {
           continue;
         }
         const priceString = (pricesArr[i] || '0').replace(/[^0-9]/g, '');
