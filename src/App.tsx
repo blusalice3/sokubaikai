@@ -684,7 +684,7 @@ const App: React.FC = () => {
     const { itemsToDelete, itemsToUpdate, itemsToAdd } = updateData;
     
     setEventLists(prev => {
-      let newItems = [...(prev[activeEventName] || [])];
+      let newItems: ShoppingItem[] = [...(prev[activeEventName] || [])];
       
       // 削除
       const deleteIds = new Set(itemsToDelete.map(item => item.id));
@@ -695,13 +695,18 @@ const App: React.FC = () => {
       newItems = newItems.map(item => updateMap.get(item.id) || item);
       
       // 追加（ソート挿入）
-      const newItemsWithIds: ShoppingItem[] = itemsToAdd.map(itemData => ({
-        id: crypto.randomUUID(),
-        ...itemData,
-        purchaseStatus: 'None' as const
-      }));
-      
-      newItemsWithIds.forEach(newItem => {
+      itemsToAdd.forEach(itemData => {
+        const newItem: ShoppingItem = {
+          id: crypto.randomUUID(),
+          circle: itemData.circle,
+          eventDate: itemData.eventDate,
+          block: itemData.block,
+          number: itemData.number,
+          title: itemData.title,
+          price: itemData.price,
+          remarks: itemData.remarks,
+          purchaseStatus: 'None'
+        };
         newItems = insertItemSorted(newItems, newItem);
       });
       
