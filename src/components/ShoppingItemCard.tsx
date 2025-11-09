@@ -67,13 +67,14 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    // Don't trigger on drag handle or interactive elements
     if ((e.target as HTMLElement).closest('[data-drag-handle], button, input, select, [data-no-long-press]')) {
         return;
     }
     clearLongPress();
     longPressTimeout.current = window.setTimeout(() => {
         setMenuVisible(true);
-    }, 500);
+    }, 500); // 500ms for long press
   };
 
   const handlePointerUp = () => {
@@ -96,13 +97,13 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
     };
   }, [menuVisible]);
 
-  // 価格オプションを10,000円まで拡張
+
   const priceOptions = useMemo(() => {
     const options = new Set<number>();
-    for (let i = 0; i <= 100; i++) {
+    for (let i = 0; i <= 50; i++) {
         options.add(i * 100);
     }
-    options.add(item.price);
+    options.add(item.price); // Ensure current price is always an option
     return Array.from(options).sort((a, b) => a - b);
   }, [item.price]);
 
@@ -132,7 +133,7 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
-        onTouchMove={handlePointerLeave}
+        onTouchMove={handlePointerLeave} // Cancel on scroll
     >
       {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>}
       <div className={statusBgOverlay}></div>
@@ -141,7 +142,7 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
             type="checkbox"
             checked={isSelected}
             onChange={() => onSelectItem(item.id)}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // Prevent long press/drag from firing
             data-no-long-press
             className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
             aria-label={`Select item ${item.circle} - ${item.title}`}
@@ -164,7 +165,7 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
             />
         </div>
         <div className={`flex-grow flex flex-col items-center justify-center text-center text-slate-700 dark:text-slate-200 ${currentStatus.dim ? 'line-through' : ''}`}>
-          <p className="text-lg font-semibold truncate" title={item.title}>{item.title || '(タイトルなし)'}</p>
+          <p className="text-lg font-semibold truncate" title={item.title}>{item.title || '（タイトルなし）'}</p>
         </div>
       </div>
       
