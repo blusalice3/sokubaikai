@@ -73,23 +73,21 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
     const windowWidth = window.innerWidth;
     const centerX = windowWidth / 2;
 
-    // 画面中央より左に1/3以上移動したら左列に移動
-    if (e.clientX < centerX - (e.currentTarget.clientWidth / 3)) {
+    // アイテムの幅の1/3以上が画面中央より左に移動したら左列に移動
+    // ドラッグ中のアイテムの位置が画面中央より左に一定の距離移動したかを判定
+    // 画面幅の1/3を閾値として使用
+    const threshold = windowWidth / 3;
+    if (e.clientX < centerX - threshold) {
       // 左列への移動判定
-      if (columnType === 'candidate' && onMoveToColumn) {
-        // 候補リストから実行モード列への移動
-        const rect = e.currentTarget.getBoundingClientRect();
-        const relativeY = e.clientY - rect.top;
-        const itemHeight = rect.height / items.length;
-        const insertIndex = Math.floor(relativeY / itemHeight);
-        setInsertPosition(insertIndex);
-      } else if (columnType === 'execute' && onMoveToColumn) {
+      if (columnType === 'execute' && onMoveToColumn) {
         // 実行モード列内での挿入位置表示
         const rect = e.currentTarget.getBoundingClientRect();
         const relativeY = e.clientY - rect.top;
-        const itemHeight = rect.height / items.length;
-        const insertIndex = Math.floor(relativeY / itemHeight);
+        const itemHeight = items.length > 0 ? rect.height / items.length : 0;
+        const insertIndex = itemHeight > 0 ? Math.floor(relativeY / itemHeight) : 0;
         setInsertPosition(insertIndex);
+      } else {
+        setInsertPosition(null);
       }
     } else {
       setInsertPosition(null);
@@ -111,11 +109,13 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
     const targetColumn = columnType;
     const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
     
-    // 画面中央より左に1/3以上移動したら左列に移動
-    if (e.clientX < centerX - (e.currentTarget.clientWidth / 3)) {
+    // アイテムの幅の1/3以上が画面中央より左に移動したら左列に移動
+    // 画面幅の1/3を閾値として使用
+    const threshold = windowWidth / 3;
+    if (e.clientX < centerX - threshold) {
       if (targetColumn === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
         // 候補リストから実行モード列への移動
-        if (selectedItemIds.has(dragItem.current!)) {
+        if (dragItem.current && selectedItemIds.has(dragItem.current)) {
           onMoveToColumn(Array.from(selectedItemIds));
         } else if (dragItem.current) {
           onMoveToColumn([dragItem.current]);
@@ -156,7 +156,8 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
             e.preventDefault();
             const windowWidth = window.innerWidth;
             const centerX = windowWidth / 2;
-            if (e.clientX < centerX - (e.currentTarget.clientWidth / 3)) {
+            const threshold = windowWidth / 3;
+            if (e.clientX < centerX - threshold && columnType === 'execute') {
               e.currentTarget.classList.add('bg-blue-50', 'dark:bg-blue-900/20');
             }
           }}
@@ -169,7 +170,8 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
             const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
             const windowWidth = window.innerWidth;
             const centerX = windowWidth / 2;
-            if (e.clientX < centerX - (e.currentTarget.clientWidth / 3) && columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
+            const threshold = windowWidth / 3;
+            if (e.clientX < centerX - threshold && columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
               const dragId = dragItem.current;
               if (dragId) {
                 if (selectedItemIds.has(dragId)) {
@@ -202,7 +204,8 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
           const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
           const windowWidth = window.innerWidth;
           const centerX = windowWidth / 2;
-          if (e.clientX < centerX - (e.currentTarget.clientWidth / 3) && columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
+          const threshold = windowWidth / 3;
+          if (e.clientX < centerX - threshold && columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
             const dragId = dragItem.current;
             if (dragId) {
               if (selectedItemIds.has(dragId)) {
