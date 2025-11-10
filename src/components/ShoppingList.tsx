@@ -67,6 +67,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     
     const clientY = e.clientY;
     const windowHeight = window.innerHeight;
@@ -77,18 +78,16 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
     // ドラッグ中のアイテムの位置が画面中央より左に一定の距離移動したかを判定
     // 画面幅の1/3を閾値として使用
     const threshold = windowWidth / 3;
-    if (e.clientX < centerX - threshold) {
-      // 左列への移動判定
-      if (columnType === 'execute' && onMoveToColumn) {
-        // 実行モード列内での挿入位置表示
-        const rect = e.currentTarget.getBoundingClientRect();
-        const relativeY = e.clientY - rect.top;
-        const itemHeight = items.length > 0 ? rect.height / items.length : 0;
-        const insertIndex = itemHeight > 0 ? Math.floor(relativeY / itemHeight) : 0;
-        setInsertPosition(insertIndex);
-      } else {
-        setInsertPosition(null);
-      }
+    
+    // 候補リストから実行モード列への移動判定
+    const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
+    if (e.clientX < centerX - threshold && columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
+      // 実行モード列内での挿入位置表示
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeY = e.clientY - rect.top;
+      const itemHeight = items.length > 0 ? rect.height / items.length : 0;
+      const insertIndex = itemHeight > 0 ? Math.floor(relativeY / itemHeight) : 0;
+      setInsertPosition(insertIndex);
     } else {
       setInsertPosition(null);
     }
@@ -102,7 +101,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setInsertPosition(null);
+    e.stopPropagation();
     
     const windowWidth = window.innerWidth;
     const centerX = windowWidth / 2;
@@ -112,14 +111,17 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
     // アイテムの幅の1/3以上が画面中央より左に移動したら左列に移動
     // 画面幅の1/3を閾値として使用
     const threshold = windowWidth / 3;
-    if (e.clientX < centerX - threshold) {
-      if (targetColumn === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
-        // 候補リストから実行モード列への移動
+    
+    // 候補リストから実行モード列への移動判定
+    if (targetColumn === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
+      // ドロップ位置が画面中央より左にある場合（より寛容な条件）
+      if (e.clientX < centerX) {
         if (dragItem.current && selectedItemIds.has(dragItem.current)) {
           onMoveToColumn(Array.from(selectedItemIds));
         } else if (dragItem.current) {
           onMoveToColumn([dragItem.current]);
         }
+        setInsertPosition(null);
         dragItem.current = null;
         dragOverItem.current = null;
         return;
@@ -133,6 +135,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
       }
     }
     
+    setInsertPosition(null);
     dragItem.current = null;
     dragOverItem.current = null;
   };
@@ -166,18 +169,23 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
           }}
           onDrop={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             e.currentTarget.classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
             const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
             const windowWidth = window.innerWidth;
             const centerX = windowWidth / 2;
             const threshold = windowWidth / 3;
-            if (e.clientX < centerX - threshold && columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
-              const dragId = dragItem.current;
-              if (dragId) {
-                if (selectedItemIds.has(dragId)) {
-                  onMoveToColumn(Array.from(selectedItemIds));
-                } else {
-                  onMoveToColumn([dragId]);
+            // 空のリストへのドロップも処理
+            if (columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
+              // ドロップ位置が画面中央より左にある場合
+              if (e.clientX < centerX) {
+                const dragId = dragItem.current;
+                if (dragId) {
+                  if (selectedItemIds.has(dragId)) {
+                    onMoveToColumn(Array.from(selectedItemIds));
+                  } else {
+                    onMoveToColumn([dragId]);
+                  }
                 }
               }
             }
@@ -201,17 +209,22 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
       onDrop={(e) => {
         if (e.currentTarget === e.target) {
           e.preventDefault();
+          e.stopPropagation();
           const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
           const windowWidth = window.innerWidth;
           const centerX = windowWidth / 2;
           const threshold = windowWidth / 3;
-          if (e.clientX < centerX - threshold && columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
-            const dragId = dragItem.current;
-            if (dragId) {
-              if (selectedItemIds.has(dragId)) {
-                onMoveToColumn(Array.from(selectedItemIds));
-              } else {
-                onMoveToColumn([dragId]);
+          // コンテナ全体へのドロップも処理
+          if (columnType === 'execute' && sourceColumn === 'candidate' && onMoveToColumn) {
+            // ドロップ位置が画面中央より左にある場合
+            if (e.clientX < centerX) {
+              const dragId = dragItem.current;
+              if (dragId) {
+                if (selectedItemIds.has(dragId)) {
+                  onMoveToColumn(Array.from(selectedItemIds));
+                } else {
+                  onMoveToColumn([dragId]);
+                }
               }
             }
           }
