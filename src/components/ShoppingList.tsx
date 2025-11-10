@@ -211,7 +211,6 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
             e.stopPropagation();
             e.currentTarget.classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
             const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
-            const sourceDay = e.dataTransfer.getData('sourceDay') as 'day1' | 'day2' | undefined;
             const windowWidth = window.innerWidth;
             const centerX = windowWidth / 2;
             // 空のリストへのドロップも処理
@@ -266,7 +265,6 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
           e.preventDefault();
           e.stopPropagation();
           const sourceColumn = e.dataTransfer.getData('sourceColumn') as 'execute' | 'candidate' | undefined;
-          const sourceDay = e.dataTransfer.getData('sourceDay') as 'day1' | 'day2' | undefined;
           const windowWidth = window.innerWidth;
           const centerX = windowWidth / 2;
           // コンテナ全体へのドロップも処理
@@ -348,4 +346,3 @@ const ShoppingList: React.FC<ShoppingListProps> = ({
 };
 
 export default ShoppingList;
-
