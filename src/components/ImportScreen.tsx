@@ -108,19 +108,19 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
       
       const cells = parseCSVLine(line);
       
-      // M列(0), N列(1), O列(2), P列(3)が全て入力されている行のみをインポート
-      const circle = cells[12]?.trim() || ''; // M列 (0-indexed: 12)
-      const eventDate = cells[13]?.trim() || ''; // N列 (0-indexed: 13)
-      const block = cells[14]?.trim() || ''; // O列 (0-indexed: 14)
-      const number = cells[15]?.trim() || ''; // P列 (0-indexed: 15)
+      // A列(0), B列(1), C列(2), D列(3)が全て入力されている行のみをインポート
+      const circle = cells[0]?.trim() || ''; // A列 (0-indexed: 0)
+      const eventDate = cells[1]?.trim() || ''; // B列 (0-indexed: 1)
+      const block = cells[2]?.trim() || ''; // C列 (0-indexed: 2)
+      const number = cells[3]?.trim() || ''; // D列 (0-indexed: 3)
       
       if (!circle || !eventDate || !block || !number) {
         continue;
       }
       
-      const title = cells[16]?.trim() || ''; // Q列 (0-indexed: 16)
-      const price = parseInt((cells[17] || '0').replace(/[^0-9]/g, ''), 10) || 0; // R列 (0-indexed: 17)
-      const remarks = cells[22]?.trim() || ''; // W列 (0-indexed: 22)
+      const title = cells[4]?.trim() || ''; // E列 (0-indexed: 4)
+      const price = parseInt((cells[5] || '0').replace(/[^0-9]/g, ''), 10) || 0; // F列 (0-indexed: 5)
+      const remarks = cells[7]?.trim() || ''; // H列 (0-indexed: 7)
       
       newItems.push({
         circle,
@@ -151,7 +151,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
       }
       alert(`${newItems.length}件のアイテムをインポートしました。`);
     } else {
-      alert('インポートできるデータが見つかりませんでした。M列からP列の値が全て入力されている行が必要です。');
+      alert('インポートできるデータが見つかりませんでした。A列からD列の値が全て入力されている行が必要です。');
     }
   };
 
@@ -189,7 +189,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
         setSpreadsheetUrl('');
         alert(`${newItems.length}件のアイテムをインポートしました。`);
       } else {
-        alert('インポートできるデータが見つかりませんでした。M列からP列の値が全て入力されている行が必要です。');
+        alert('インポートできるデータが見つかりませんでした。A列からD列の値が全て入力されている行が必要です。');
       }
     } catch (error) {
       console.error('Import error:', error);
@@ -255,7 +255,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
         const eventDate = eventDatesArr[i] || '';
         const block = blocksArr[i] || '';
         const number = numbersArr[i] || '';
-        // M列からP列（サークル、参加日、ブロック、ナンバー）の値が全て入力されている行のみをインポート
+        // A列からD列（サークル、参加日、ブロック、ナンバー）の値が全て入力されている行のみをインポート
         if (!circle || !eventDate || !block || !number) {
           continue;
         }
@@ -269,7 +269,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
           onBulkAdd(finalEventName, newItems);
           setEventName(''); setCircles(''); setEventDates(''); setBlocks(''); setNumbers(''); setTitles(''); setPrices(''); setRemarks('');
       } else {
-          alert('有効なアイテムデータが見つかりませんでした。M列からP列の値が全て入力されている行が必要です。');
+          alert('有効なアイテムデータが見つかりませんでした。A列からD列の値が全て入力されている行が必要です。');
       }
     } else { // Adding single item to existing list
         if (!singleCircle.trim() && !singleTitle.trim()) {
@@ -322,7 +322,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
       </h2>
       <p className="text-center text-slate-600 dark:text-slate-400 mb-6">
         {isCreatingNew 
-          ? 'スプレッドシートのM列からR列をコピーし、下の「サークル名」の欄に貼り付けてください。データが自動で振り分けられます。'
+          ? 'スプレッドシートのA列からF列をコピーし、下の「サークル名」の欄に貼り付けてください。データが自動で振り分けられます。'
           : isEditing ? 'アイテムの情報を編集してください。' : '追加するアイテムのデータを入力してください。'
         }
       </p>
@@ -367,7 +367,7 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
                         URLからインポート
                       </button>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">シート名「品目表」のM列からR列とW列をインポートします</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">シート名「品目表」のA列からF列とH列をインポートします</p>
                   </div>
                   
                   {/* CSVファイルインポート */}
@@ -381,22 +381,22 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
                       onChange={handleFileImport}
                       className={formInputClass}
                     />
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">M列からP列の値が全て入力されている行のみをインポートします</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">A列からD列の値が全て入力されている行のみをインポートします</p>
                   </div>
                   
                   <div className="text-center text-slate-500 dark:text-slate-400 my-4">または</div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <div className="md:col-span-1"><label htmlFor="circles" className={labelClass}>サークル名 (M)</label><textarea id="circles" value={circles} onChange={e => setCircles(e.target.value)} onPaste={handlePaste} className={formTextareaClass} placeholder="サークルA&#10;サークルB" /></div>
-                    <div className="md:col-span-1"><label htmlFor="event-dates" className={labelClass}>参加日 (N)</label><textarea id="event-dates" value={eventDates} onChange={e => setEventDates(e.target.value)} className={formTextareaClass} placeholder="1日目&#10;2日目" /></div>
-                    <div className="md:col-span-1"><label htmlFor="blocks" className={labelClass}>ブロック (O)</label><textarea id="blocks" value={blocks} onChange={e => setBlocks(e.target.value)} className={formTextareaClass} placeholder="東1&#10;西3" /></div>
-                    <div className="md:col-span-1"><label htmlFor="numbers" className={labelClass}>ナンバー (P)</label><textarea id="numbers" value={numbers} onChange={e => setNumbers(e.target.value)} className={formTextareaClass} placeholder="A-01a&#10;C-03a" /></div>
-                    <div className="md:col-span-1"><label htmlFor="titles" className={labelClass}>タイトル (Q)</label><textarea id="titles" value={titles} onChange={e => setTitles(e.target.value)} className={formTextareaClass} placeholder="新刊セット&#10;既刊1" /></div>
-                    <div className="md:col-span-1"><label htmlFor="prices" className={labelClass}>頒布価格 (R)</label><textarea id="prices" value={prices} onChange={e => setPrices(e.target.value)} className={formTextareaClass} placeholder="1000&#10;500" /></div>
+                    <div className="md:col-span-1"><label htmlFor="circles" className={labelClass}>サークル名 (A)</label><textarea id="circles" value={circles} onChange={e => setCircles(e.target.value)} onPaste={handlePaste} className={formTextareaClass} placeholder="サークルA&#10;サークルB" /></div>
+                    <div className="md:col-span-1"><label htmlFor="event-dates" className={labelClass}>参加日 (B)</label><textarea id="event-dates" value={eventDates} onChange={e => setEventDates(e.target.value)} className={formTextareaClass} placeholder="1日目&#10;2日目" /></div>
+                    <div className="md:col-span-1"><label htmlFor="blocks" className={labelClass}>ブロック (C)</label><textarea id="blocks" value={blocks} onChange={e => setBlocks(e.target.value)} className={formTextareaClass} placeholder="東1&#10;西3" /></div>
+                    <div className="md:col-span-1"><label htmlFor="numbers" className={labelClass}>ナンバー (D)</label><textarea id="numbers" value={numbers} onChange={e => setNumbers(e.target.value)} className={formTextareaClass} placeholder="A-01a&#10;C-03a" /></div>
+                    <div className="md:col-span-1"><label htmlFor="titles" className={labelClass}>タイトル (E)</label><textarea id="titles" value={titles} onChange={e => setTitles(e.target.value)} className={formTextareaClass} placeholder="新刊セット&#10;既刊1" /></div>
+                    <div className="md:col-span-1"><label htmlFor="prices" className={labelClass}>頒布価格 (F)</label><textarea id="prices" value={prices} onChange={e => setPrices(e.target.value)} className={formTextareaClass} placeholder="1000&#10;500" /></div>
                 </div>
                 <div>
-                    <label htmlFor="remarks" className={labelClass}>備考 (W列)</label>
+                    <label htmlFor="remarks" className={labelClass}>備考 (H列)</label>
                     <textarea id="remarks" value={remarks} onChange={e => setRemarks(e.target.value)} className={`${formTextareaClass} h-24`} placeholder="スケブお願い&#10;挨拶に行く" />
                 </div>
             </>
