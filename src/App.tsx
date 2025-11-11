@@ -1019,34 +1019,32 @@ const App: React.FC = () => {
             </div>
             {activeEventName && <h2 className="text-sm text-blue-600 dark:text-blue-400 font-semibold mt-1">{activeEventName}</h2>}
           </div>
-          {activeEventName && mainContentVisible && items.length > 0 && (
-                <div className="flex items-center gap-4">
-                    {selectedItemIds.size > 0 && (
-                        <>
-                            <BulkActionControls
-                                onSort={handleBulkSort}
-                                onClear={handleClearSelection}
-                            />
-                            {hasCandidateSelection && (
-                                <button
-                                    onClick={() => handleMoveToExecuteColumn(Array.from(selectedItemIds))}
-                                    className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors flex-shrink-0"
-                                >
-                                    選択したアイテムを左列に移動 ({selectedItemIds.size}件)
-                                </button>
-                            )}
-                        </>
-                    )}
-                    {currentMode === 'execute' && (
-                      <button
-                          onClick={handleSortToggle}
-                          className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 text-blue-600 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/50 dark:hover:bg-blue-900 flex-shrink-0"
-                      >
-                          {sortLabels[sortState]}
-                      </button>
-                    )}
-                </div>
-            )}
+          <div className="flex items-center gap-4">
+              {activeEventName && mainContentVisible && items.length > 0 && selectedItemIds.size > 0 && (
+                  <>
+                      <BulkActionControls
+                          onSort={handleBulkSort}
+                          onClear={handleClearSelection}
+                      />
+                      {hasCandidateSelection && (
+                          <button
+                              onClick={() => handleMoveToExecuteColumn(Array.from(selectedItemIds))}
+                              className="px-3 py-1.5 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors flex-shrink-0"
+                          >
+                              選択したアイテムを左列に移動 ({selectedItemIds.size}件)
+                          </button>
+                      )}
+                  </>
+              )}
+              {activeEventName && mainContentVisible && items.length > 0 && currentMode === 'execute' && (
+                  <button
+                      onClick={handleSortToggle}
+                      className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 text-blue-600 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/50 dark:hover:bg-blue-900 flex-shrink-0"
+                  >
+                      {sortLabels[sortState]}
+                  </button>
+              )}
+          </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-200 dark:border-slate-700">
              <div className="flex space-x-2 pt-2 pb-2 overflow-x-auto">
