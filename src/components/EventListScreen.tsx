@@ -23,9 +23,10 @@ interface EventListScreenProps {
   onDelete: (name: string) => void;
   onExport: (name: string) => void;
   onUpdate?: (name: string) => void;
+  onRename?: (oldName: string, newName: string) => void;
 }
 
-const EventListScreen: React.FC<EventListScreenProps> = ({ eventNames, onSelect, onDelete, onExport, onUpdate }) => {
+const EventListScreen: React.FC<EventListScreenProps> = ({ eventNames, onSelect, onDelete, onExport, onUpdate, onRename }) => {
   const longPressTimeout = useRef<number | null>(null);
   const [menuVisibleFor, setMenuVisibleFor] = useState<string | null>(null);
 
@@ -113,9 +114,17 @@ const EventListScreen: React.FC<EventListScreenProps> = ({ eventNames, onSelect,
                           <span>🔄 アイテム更新</span>
                       </button>
                     )}
+                    {onRename && (
+                      <button 
+                          onClick={(e) => { e.stopPropagation(); onRename(name, name); setMenuVisibleFor(null); }}
+                          className={`flex items-center space-x-2 px-4 py-2 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/50 transition-colors ${onUpdate ? '' : 'rounded-l-md'}`}
+                      >
+                          <span>✏️ 名称変更</span>
+                      </button>
+                    )}
                     <button 
                         onClick={(e) => { e.stopPropagation(); onExport(name); setMenuVisibleFor(null); }}
-                        className={`flex items-center space-x-2 px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors ${onUpdate ? '' : 'rounded-l-md'}`}
+                        className="flex items-center space-x-2 px-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors"
                     >
                         <DocumentArrowDownIcon className="w-4 h-4" />
                         <span>Excel形式で出力</span>
