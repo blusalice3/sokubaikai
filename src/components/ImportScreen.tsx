@@ -102,25 +102,45 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
   const processImportData = (lines: string[]): Omit<ShoppingItem, 'id' | 'purchaseStatus'>[] => {
     const newItems: Omit<ShoppingItem, 'id' | 'purchaseStatus'>[] = [];
     
-    for (let i = 1; i < lines.length; i++) {
+    // ヘッダー行をスキップ
+    let startIndex = 0;
+    if (lines.length > 0 && lines[0].includes('サークル名')) {
+      startIndex = 1;
+    }
+    
+    for (let i = startIndex; i < lines.length; i++) {
       const line = lines[i];
       if (!line.trim()) continue;
       
       const cells = parseCSVLine(line);
       
-      // M列(12), N列(13), O列(14), P列(15)が全て入力されている行のみをインポート
-      const circle = cells[12]?.trim() || ''; // M列 (0-indexed: 0)
-      const eventDate = cells[13]?.trim() || ''; // N列 (0-indexed: 1)
-      const block = cells[14]?.trim() || ''; // O列 (0-indexed: 2)
-      const number = cells[15]?.trim() || ''; // P列 (0-indexed: 3)
+      // エクスポートされたCSVファイル形式（A列から始まる）を優先的にチェック
+      let circle = cells[0]?.trim() || ''; // A列: サークル名
+      let eventDate = cells[1]?.trim() || ''; // B列: 参加日
+      let block = cells[2]?.trim() || ''; // C列: ブロック
+      let number = cells[3]?.trim() || ''; // D列: ナンバー
+      let title = cells[4]?.trim() || ''; // E列: タイトル
+      let priceStr = cells[5]?.trim() || '0'; // F列: 頒布価格
+      let remarks = cells[7]?.trim() || ''; // H列: 備考
       
+      // A列からD列が全て入力されているかチェック
       if (!circle || !eventDate || !block || !number) {
-        continue;
+        // スプレッドシート形式（M列から始まる）を試す
+        circle = cells[12]?.trim() || ''; // M列
+        eventDate = cells[13]?.trim() || ''; // N列
+        block = cells[14]?.trim() || ''; // O列
+        number = cells[15]?.trim() || ''; // P列
+        title = cells[16]?.trim() || ''; // Q列
+        priceStr = cells[17]?.trim() || '0'; // R列
+        remarks = cells[22]?.trim() || ''; // W列
+        
+        // それでも必須項目が揃わない場合はスキップ
+        if (!circle || !eventDate || !block || !number) {
+          continue;
+        }
       }
       
-      const title = cells[16]?.trim() || ''; // Q列 (0-indexed: 4)
-      const price = parseInt((cells[17] || '0').replace(/[^0-9]/g, ''), 10) || 0; // R列 (0-indexed: 5)
-      const remarks = cells[22]?.trim() || ''; // W列 (0-indexed: 7)
+      const price = parseInt(priceStr.replace(/[^0-9]/g, ''), 10) || 0;
       
       newItems.push({
         circle,
@@ -469,4 +489,3 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
 };
 
 export default ImportScreen;
-
