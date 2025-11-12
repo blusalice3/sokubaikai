@@ -371,6 +371,7 @@ const App: React.FC = () => {
     }));
     
     setSelectedItemIds(new Set());
+    setCandidateNumberSortDirection(null);
   }, [activeEventName, activeTab, dayModes]);
   
   const handleSelectEvent = useCallback((eventName: string) => {
@@ -642,6 +643,87 @@ const App: React.FC = () => {
   const handleClearBlockFilters = useCallback(() => {
     setSelectedBlockFilters(new Set());
   }, []);
+
+  const [candidateNumberSortDirection, setCandidateNumberSortDirection] = useState<'asc' | 'desc' | null>(null);
+
+  const handleCandidateNumberSort = useCallback(() => {
+    if (!activeEventName) return;
+    
+    const nextDirection = candidateNumberSortDirection === 'asc' ? 'desc' : 'asc';
+    
+    setEventLists(prev => {
+      const allItems = [...(prev[activeEventName] || [])];
+      const currentTabKey = activeTab === 'day1' ? '1日目' : '2日目';
+      const currentDay = activeTab === 'day1' ? 'day1' : 'day2';
+      const executeIds = new Set(executeModeItems[activeEventName]?.[currentDay] || []);
+
+      // 候補リストのアイテムのみを取得
+      const candidateItems = allItems.filter(item => 
+        item.eventDate.includes(currentTabKey) && !executeIds.has(item.id)
+      );
+      
+      // ブロックフィルタを適用
+      let filteredCandidateItems = candidateItems;
+      if (selectedBlockFilters.size > 0) {
+        filteredCandidateItems = candidateItems.filter(item => selectedBlockFilters.has(item.block));
+      }
+      
+      if (filteredCandidateItems.length === 0) return prev;
+
+      // ナンバーでソート
+      const sortedCandidateItems = [...filteredCandidateItems].sort((a, b) => {
+        const comparison = a.number.localeCompare(b.number, undefined, { numeric: true, sensitivity: 'base' });
+        return nextDirection === 'asc' ? comparison : -comparison;
+      });
+
+      // 候補リストのアイテムのIDと順序をマップ
+      const sortedCandidateMap = new Map(sortedCandidateItems.map((item, index) => [item.id, { item, sortIndex: index }]));
+      
+      // 元のリストを維持しつつ、候補リストのアイテムのみをソート順に再配置
+      const otherItems: ShoppingItem[] = [];
+      const candidateItemsToSort: { item: ShoppingItem; originalIndex: number; sortIndex: number }[] = [];
+      
+      allItems.forEach((item, index) => {
+        if (!item.eventDate.includes(currentTabKey)) {
+          otherItems.push(item);
+        } else if (executeIds.has(item.id)) {
+          otherItems.push(item);
+        } else if (sortedCandidateMap.has(item.id)) {
+          const { item: sortedItem, sortIndex } = sortedCandidateMap.get(item.id)!;
+          candidateItemsToSort.push({ item: sortedItem, originalIndex: index, sortIndex });
+        } else {
+          otherItems.push(item);
+        }
+      });
+      
+      // ソートインデックスでソート
+      candidateItemsToSort.sort((a, b) => a.sortIndex - b.sortIndex);
+      
+      // 元の順序を保持しつつ、候補リストのアイテムをソート順に配置
+      const resultItems: ShoppingItem[] = [];
+      let candidateIndex = 0;
+      
+      allItems.forEach((item, index) => {
+        if (!item.eventDate.includes(currentTabKey)) {
+          resultItems.push(item);
+        } else if (executeIds.has(item.id)) {
+          resultItems.push(item);
+        } else if (sortedCandidateMap.has(item.id)) {
+          resultItems.push(candidateItemsToSort[candidateIndex++].item);
+        } else {
+          resultItems.push(item);
+        }
+      });
+      
+      return {
+        ...prev,
+        [activeEventName]: resultItems
+      };
+    });
+
+    setCandidateNumberSortDirection(nextDirection);
+    setSelectedItemIds(new Set());
+  }, [activeEventName, activeTab, executeModeItems, selectedBlockFilters, candidateNumberSortDirection]);
 
   const handleClearSelection = useCallback(() => {
     setSelectedItemIds(new Set());
@@ -1072,6 +1154,7 @@ const App: React.FC = () => {
         setItemToEdit(null);
         setSelectedItemIds(new Set());
         setSelectedBlockFilters(new Set());
+        setCandidateNumberSortDirection(null);
         setActiveTab(tab);
       }
     };
@@ -1095,6 +1178,14 @@ const App: React.FC = () => {
     );
   };
 
+  const executeColumnItems = useMemo(() => {
+    if (!activeEventName) return [];
+    const currentDay = activeTab === 'day1' ? 'day1' : 'day2';
+    const executeIds = executeModeItems[activeEventName]?.[currentDay] || [];
+    const itemsMap = new Map(items.map(item => [item.id, item]));
+    return executeIds.map(id => itemsMap.get(id)).filter(Boolean) as ShoppingItem[];
+  }, [activeEventName, activeTab, executeModeItems, items]);
+
   const visibleItems = useMemo(() => {
     const currentDay = activeTab === 'day1' ? 'day1' : 'day2';
     const itemsForTab = activeTab === 'day1' ? day1Items : day2Items;
@@ -1104,27 +1195,16 @@ const App: React.FC = () => {
     const mode = dayModes[activeEventName]?.[currentDay] || 'edit';
     
     if (mode === 'execute') {
-      // 実行モード: 実行列のアイテムのみ表示
-      const executeIds = new Set(executeModeItems[activeEventName]?.[currentDay] || []);
-      const filtered = itemsForTab.filter(item => executeIds.has(item.id));
-      
+      // 実行モード: 実行列のアイテムのみ表示（編集モードで配置した順序を保持）
       if (sortState === 'Manual') {
-        return filtered;
+        return executeColumnItems;
       }
-      return filtered.filter(item => item.purchaseStatus === sortState as Exclude<SortState, 'Manual'>);
+      return executeColumnItems.filter(item => item.purchaseStatus === sortState as Exclude<SortState, 'Manual'>);
     }
     
     // 編集モード: すべてのアイテムを表示（列分けはコンポーネント側で処理）
     return itemsForTab;
-  }, [activeTab, day1Items, day2Items, sortState, activeEventName, dayModes, executeModeItems]);
-
-  const executeColumnItems = useMemo(() => {
-    if (!activeEventName) return [];
-    const currentDay = activeTab === 'day1' ? 'day1' : 'day2';
-    const executeIds = executeModeItems[activeEventName]?.[currentDay] || [];
-    const itemsMap = new Map(items.map(item => [item.id, item]));
-    return executeIds.map(id => itemsMap.get(id)).filter(Boolean) as ShoppingItem[];
-  }, [activeEventName, activeTab, executeModeItems, items]);
+  }, [activeTab, day1Items, day2Items, sortState, activeEventName, dayModes, executeColumnItems]);
 
   // 候補リストから動的にブロック値を取得
   const availableBlocks = useMemo(() => {
@@ -1346,14 +1426,29 @@ const App: React.FC = () => {
                       <div className="mt-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">ブロックでフィルタ:</span>
-                          {selectedBlockFilters.size > 0 && (
-                            <button
-                              onClick={handleClearBlockFilters}
-                              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
-                            >
-                              すべて解除
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {selectedBlockFilters.size > 0 && (
+                              <>
+                                <button
+                                  onClick={handleCandidateNumberSort}
+                                  className={`p-1.5 rounded-md transition-colors ${
+                                    candidateNumberSortDirection
+                                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300'
+                                      : 'bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600'
+                                  }`}
+                                  title={candidateNumberSortDirection === 'desc' ? "ナンバー降順 (昇順へ)" : candidateNumberSortDirection === 'asc' ? "ナンバー昇順 (降順へ)" : "ナンバー昇順でソート"}
+                                >
+                                  {candidateNumberSortDirection === 'desc' ? <SortDescendingIcon className="w-4 h-4" /> : <SortAscendingIcon className="w-4 h-4" />}
+                                </button>
+                                <button
+                                  onClick={handleClearBlockFilters}
+                                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                                >
+                                  すべて解除
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {availableBlocks.map(block => (
