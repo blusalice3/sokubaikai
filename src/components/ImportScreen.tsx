@@ -257,12 +257,12 @@ const ImportScreen: React.FC<ImportScreenProps> = ({ onBulkAdd, activeEventName,
 
       const text = await response.text();
       const lines = text.split('\n').filter(line => line.trim() !== '');
-      const newItems = processImportData(lines);
+      const importResult = processImportData(lines);
       
-      if (newItems.length > 0) {
-        onBulkAdd(eventName.trim(), newItems, { url: spreadsheetUrl, sheetName });
+      if (importResult.items.length > 0) {
+        onBulkAdd(eventName.trim(), importResult.items, { url: spreadsheetUrl, sheetName });
         setSpreadsheetUrl('');
-        alert(`${newItems.length}件のアイテムをインポートしました。`);
+        alert(`${importResult.items.length}件のアイテムをインポートしました。`);
       } else {
         alert('インポートできるデータが見つかりませんでした。A列からD列の値が全て入力されている行が必要です。');
       }
