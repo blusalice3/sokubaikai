@@ -126,6 +126,34 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
   const isUnpurchased = item.purchaseStatus === 'None';
   const useBlockColor = isUnpurchased && blockBackgroundColor;
 
+  // 文字表示エリアの背景色を計算（警告表示を隠すため）
+  const textAreaBgColor = useMemo(() => {
+    if (isSelected) {
+      return 'rgba(219, 234, 254, 0.8)'; // bg-blue-100相当
+    }
+    if (useBlockColor) {
+      return 'transparent';
+    }
+    if (isStriped) {
+      return 'rgba(239, 246, 255, 0.4)'; // bg-blue-50/50相当
+    }
+    return 'rgba(255, 255, 255, 0.8)'; // bg-white相当
+  }, [isSelected, useBlockColor, isStriped]);
+
+  // ダークモード用の文字表示エリアの背景色を計算
+  const textAreaBgColorDark = useMemo(() => {
+    if (isSelected) {
+      return 'rgba(30, 58, 138, 0.5)'; // dark:bg-blue-900/50相当
+    }
+    if (useBlockColor) {
+      return 'transparent';
+    }
+    if (isStriped) {
+      return 'rgba(15, 23, 42, 0.5)'; // dark:bg-slate-900/50相当
+    }
+    return 'rgba(30, 41, 59, 0.8)'; // dark:bg-slate-800相当
+  }, [isSelected, useBlockColor, isStriped]);
+
   const baseBg = isSelected 
     ? 'bg-blue-100 dark:bg-blue-900/50'
     : useBlockColor
@@ -156,10 +184,10 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
       {statusBgOverlay && <div className={statusBgOverlay}></div>}
       {remarksWarning && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <span className="text-gray-500 dark:text-gray-400 text-6xl font-bold opacity-40">{remarksWarning}</span>
+          <span className="text-gray-500 dark:text-gray-400 text-2xl font-bold opacity-30">{remarksWarning}</span>
         </div>
       )}
-      <div data-drag-handle className="relative p-3 flex flex-col items-center justify-start cursor-grab text-slate-400 dark:text-slate-500 border-r border-slate-200/80 dark:border-slate-700/80 space-y-2">
+      <div data-drag-handle className="relative p-3 flex flex-col items-center justify-start cursor-grab text-slate-400 dark:text-slate-500 border-r border-slate-200/80 dark:border-slate-700/80 space-y-2 z-10">
         <input
             type="checkbox"
             checked={isSelected}
@@ -172,8 +200,28 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
         <GripVerticalIcon className="w-6 h-6" />
       </div>
 
-      <div className="relative flex-grow p-4 min-w-0 flex flex-col h-full">
-        <div className="flex justify-between items-start gap-4">
+      <div 
+        className="relative flex-grow p-4 min-w-0 flex flex-col h-full z-20" 
+      >
+        {/* 警告表示を隠すための背景レイヤー */}
+        <div 
+          className="absolute inset-0 rounded-lg pointer-events-none"
+          style={{ 
+            backgroundColor: textAreaBgColor,
+          }}
+        ></div>
+        {/* ダークモード用の背景レイヤー */}
+        <style>{`
+          @media (prefers-color-scheme: dark) {
+            .text-area-bg-dark-${item.id.replace(/[^a-zA-Z0-9]/g, '-')} {
+              background-color: ${textAreaBgColorDark} !important;
+            }
+          }
+        `}</style>
+        <div 
+          className={`absolute inset-0 rounded-lg pointer-events-none text-area-bg-dark-${item.id.replace(/[^a-zA-Z0-9]/g, '-')}`}
+        ></div>
+        <div className="relative z-10 flex justify-between items-start gap-4">
             <div>
                 <p className="font-bold text-md text-slate-900 dark:text-slate-100">{`${item.eventDate} ${locationString}`}</p>
                 <p className="mt-1 text-slate-600 dark:text-slate-300 truncate" title={item.circle}>{item.circle}</p>
@@ -186,12 +234,12 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
                 className="text-sm bg-slate-100 dark:bg-slate-700 rounded-md py-1 px-2 w-32 sm:w-40 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             />
         </div>
-        <div className={`flex-grow flex flex-col items-center justify-center text-center text-slate-700 dark:text-slate-200 ${currentStatus.dim ? 'line-through' : ''}`}>
+        <div className={`relative z-10 flex-grow flex flex-col items-center justify-center text-center text-slate-700 dark:text-slate-200 ${currentStatus.dim ? 'line-through' : ''}`}>
           <p className="text-lg font-semibold truncate" title={item.title}>{item.title || '（タイトルなし）'}</p>
         </div>
       </div>
       
-      <div className="relative flex flex-col items-end justify-between space-y-2 p-4 border-l border-slate-200/80 dark:border-slate-700/80">
+      <div className="relative flex flex-col items-end justify-between space-y-2 p-4 border-l border-slate-200/80 dark:border-slate-700/80 z-10">
         <button 
           onClick={togglePurchaseStatus} 
           className="flex items-center space-x-2 p-2 -m-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
