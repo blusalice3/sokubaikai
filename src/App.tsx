@@ -130,7 +130,7 @@ const App: React.FC = () => {
     return 'edit';
   }, [activeEventName, dayModes, activeTab, eventDates]);
 
-  const handleBulkAdd = useCallback((eventName: string, newItemsData: Omit<ShoppingItem, 'id' | 'purchaseStatus'>[], metadata?: { url?: string; sheetName?: string }) => {
+  const handleBulkAdd = useCallback((eventName: string, newItemsData: Omit<ShoppingItem, 'id' | 'purchaseStatus'>[], metadata?: { url?: string; sheetName?: string, layoutInfo?: Array<{ itemKey: string, eventDate: string, columnType: 'execute' | 'candidate', order: number }> }) => {
     const newItems: ShoppingItem[] = newItemsData.map(itemData => ({
         id: crypto.randomUUID(),
         ...itemData,
@@ -139,13 +139,69 @@ const App: React.FC = () => {
 
     const isNewEvent = !eventLists[eventName];
 
-    setEventLists(prevLists => {
+    // 配置情報がある場合は、それに基づいてアイテムを配置
+    if (metadata?.layoutInfo && metadata.layoutInfo.length > 0 && isNewEvent) {
+      // 新規イベントの場合のみ、配置情報を適用
+      // アイテムキーでマップを作成（サークル名、参加日、ブロック、ナンバー、タイトルで照合）
+      const itemsMap = new Map<string, ShoppingItem>();
+      newItems.forEach(item => {
+        const key = getItemKey(item);
+        itemsMap.set(key, item);
+      });
+
+      // 各参加日ごとに配置情報を適用
+      const eventDatesForLayout = extractEventDates(newItems);
+      const newExecuteModeItems: ExecuteModeItems = {};
+      const sortedItemsByDate: ShoppingItem[] = [];
+      
+      eventDatesForLayout.forEach(eventDate => {
+        // 実行列のアイテム
+        const executeItemsForDate = metadata.layoutInfo!
+          .filter(layout => layout.eventDate === eventDate && layout.columnType === 'execute')
+          .sort((a, b) => a.order - b.order)
+          .map(layout => itemsMap.get(layout.itemKey))
+          .filter(Boolean) as ShoppingItem[];
+        
+        // 候補リストのアイテム
+        const candidateItemsForDate = metadata.layoutInfo!
+          .filter(layout => layout.eventDate === eventDate && layout.columnType === 'candidate')
+          .sort((a, b) => a.order - b.order)
+          .map(layout => itemsMap.get(layout.itemKey))
+          .filter(Boolean) as ShoppingItem[];
+        
+        // 実行列のIDを保存
+        newExecuteModeItems[eventDate] = executeItemsForDate.map(item => item.id);
+        
+        // 実行列、候補リストの順で並べる
+        sortedItemsByDate.push(...executeItemsForDate, ...candidateItemsForDate);
+      });
+      
+      // 配置情報がないアイテムを追加
+      const layoutItemKeys = new Set(metadata.layoutInfo!.map(layout => layout.itemKey));
+      const otherItems = newItems.filter(item => !layoutItemKeys.has(getItemKey(item)));
+      
+      setEventLists(prevLists => {
+        return {
+          ...prevLists,
+          [eventName]: [...sortedItemsByDate, ...otherItems] as ShoppingItem[]
+        };
+      });
+      
+      // 実行モードアイテムを設定
+      setExecuteModeItems(prev => ({
+        ...prev,
+        [eventName]: newExecuteModeItems
+      }));
+    } else {
+      // 配置情報がない場合は従来通り
+      setEventLists(prevLists => {
         const currentItems: ShoppingItem[] = prevLists[eventName] || [];
         return {
-            ...prevLists,
-            [eventName]: [...currentItems, ...newItems] as ShoppingItem[]
+          ...prevLists,
+          [eventName]: [...currentItems, ...newItems] as ShoppingItem[]
         };
-    });
+      });
+    }
 
     // メタデータの保存
     if (metadata?.url) {
@@ -166,17 +222,22 @@ const App: React.FC = () => {
       const initialExecuteItems: ExecuteModeItems = {};
       newEventDates.forEach(date => {
         initialDayModes[date] = 'edit' as ViewMode;
-        initialExecuteItems[date] = [];
+        if (!metadata?.layoutInfo) {
+          initialExecuteItems[date] = [];
+        }
       });
       
       setDayModes(prev => ({
         ...prev,
         [eventName]: initialDayModes
       }));
-      setExecuteModeItems(prev => ({
-        ...prev,
-        [eventName]: initialExecuteItems
-      }));
+      
+      if (!metadata?.layoutInfo) {
+        setExecuteModeItems(prev => ({
+          ...prev,
+          [eventName]: initialExecuteItems
+        }));
+      }
     }
 
     alert(`${newItems.length}件のアイテムが${isNewEvent ? 'リストにインポートされました。' : '追加されました。'}`);
@@ -905,42 +966,71 @@ const App: React.FC = () => {
       return stringData;
     };
 
-    const headers = ['サークル名', '参加日', 'ブロック', 'ナンバー', 'タイトル', '頒布価格', '購入状態', '備考'];
-    const csvRows = [headers.join(',')];
+    const csvRows: string[] = [];
 
-    // 実行列の並び順で各参加日別に並べ替え
+    // メタデータ行: スプレッドシートURL
+    const metadata = eventMetadata[eventName];
+    if (metadata?.spreadsheetUrl) {
+      csvRows.push(`#METADATA,spreadsheetUrl,${escapeCsvCell(metadata.spreadsheetUrl)}`);
+    }
+
+    const headers = ['サークル名', '参加日', 'ブロック', 'ナンバー', 'タイトル', '頒布価格', '購入状態', '備考', '列の種類', '列内順番'];
+    csvRows.push(headers.join(','));
+
+    // 各参加日ごとに配置情報を保持してエクスポート
     const eventDatesForExport = extractEventDates(itemsToExport);
     const itemsMap = new Map(itemsToExport.map(item => [item.id, item]));
     
-    // 各参加日の実行列の順序でアイテムを取得
-    const sortedItemsByDate: ShoppingItem[] = [];
-    const executeIdsSet = new Set<string>();
-    
     eventDatesForExport.forEach(eventDate => {
       const executeIds = executeModeItems[eventName]?.[eventDate] || [];
-      executeIds.forEach(id => executeIdsSet.add(id));
-      const dayItems = executeIds.map(id => itemsMap.get(id)).filter(Boolean) as ShoppingItem[];
-      sortedItemsByDate.push(...dayItems);
-    });
-    
-    // 実行列に含まれていないアイテムを取得
-    const otherItems = itemsToExport.filter(item => !executeIdsSet.has(item.id));
-    
-    // 参加日順、その他の順で結合
-    const sortedItems = [...sortedItemsByDate, ...otherItems];
-
-    sortedItems.forEach(item => {
-      const row = [
-        escapeCsvCell(item.circle),
-        escapeCsvCell(item.eventDate),
-        escapeCsvCell(item.block),
-        escapeCsvCell(item.number),
-        escapeCsvCell(item.title),
-        escapeCsvCell(item.price),
-        escapeCsvCell(statusLabels[item.purchaseStatus] || item.purchaseStatus),
-        escapeCsvCell(item.remarks),
-      ];
-      csvRows.push(row.join(','));
+      const executeIdsSet = new Set(executeIds);
+      
+      // その参加日のアイテムを取得
+      const dayItems = itemsToExport.filter(item => item.eventDate === eventDate);
+      
+      // 実行列のアイテム（順序を保持）
+      const executeItems: ShoppingItem[] = [];
+      executeIds.forEach(id => {
+        const item = itemsMap.get(id);
+        if (item) executeItems.push(item);
+      });
+      
+      // 候補リストのアイテム（元の順序を保持）
+      const candidateItems = dayItems.filter(item => !executeIdsSet.has(item.id));
+      
+      // 実行列のアイテムをエクスポート
+      executeItems.forEach((item, index) => {
+        const row = [
+          escapeCsvCell(item.circle),
+          escapeCsvCell(item.eventDate),
+          escapeCsvCell(item.block),
+          escapeCsvCell(item.number),
+          escapeCsvCell(item.title),
+          escapeCsvCell(item.price),
+          escapeCsvCell(statusLabels[item.purchaseStatus] || item.purchaseStatus),
+          escapeCsvCell(item.remarks),
+          escapeCsvCell('実行列'),
+          escapeCsvCell(index + 1),
+        ];
+        csvRows.push(row.join(','));
+      });
+      
+      // 候補リストのアイテムをエクスポート
+      candidateItems.forEach((item, index) => {
+        const row = [
+          escapeCsvCell(item.circle),
+          escapeCsvCell(item.eventDate),
+          escapeCsvCell(item.block),
+          escapeCsvCell(item.number),
+          escapeCsvCell(item.title),
+          escapeCsvCell(item.price),
+          escapeCsvCell(statusLabels[item.purchaseStatus] || item.purchaseStatus),
+          escapeCsvCell(item.remarks),
+          escapeCsvCell('候補リスト'),
+          escapeCsvCell(index + 1),
+        ];
+        csvRows.push(row.join(','));
+      });
     });
 
     const csvString = csvRows.join('\n');
@@ -954,7 +1044,7 @@ const App: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [eventLists, executeModeItems]);
+  }, [eventLists, executeModeItems, eventMetadata]);
 
   // アイテム更新機能
   const handleUpdateEvent = useCallback(async (eventName: string, urlOverride?: { url: string; sheetName: string }) => {
