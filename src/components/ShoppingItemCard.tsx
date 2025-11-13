@@ -114,6 +114,14 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
   const locationString = `${item.block}-${item.number}`;
   const IconComponent = currentStatus.icon;
 
+  // 備考欄のチェック
+  const remarksWarning = useMemo(() => {
+    if (!item.remarks) return null;
+    if (item.remarks.includes('優先')) return '⚠️優先⚠️';
+    if (item.remarks.includes('委託無')) return '⚠️委託無⚠️';
+    return null;
+  }, [item.remarks]);
+
   // 未購入の場合はブロックベースの色を使用、それ以外は購入状態の色を優先
   const isUnpurchased = item.purchaseStatus === 'None';
   const useBlockColor = isUnpurchased && blockBackgroundColor;
@@ -146,6 +154,11 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
     >
       {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>}
       {statusBgOverlay && <div className={statusBgOverlay}></div>}
+      {remarksWarning && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <span className="text-gray-500 dark:text-gray-400 text-2xl font-bold opacity-30">{remarksWarning}</span>
+        </div>
+      )}
       <div data-drag-handle className="relative p-3 flex flex-col items-center justify-start cursor-grab text-slate-400 dark:text-slate-500 border-r border-slate-200/80 dark:border-slate-700/80 space-y-2">
         <input
             type="checkbox"
