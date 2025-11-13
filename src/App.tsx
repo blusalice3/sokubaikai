@@ -154,6 +154,19 @@ const App: React.FC = () => {
       const newExecuteModeItems: ExecuteModeItems = {};
       const sortedItemsByDate: ShoppingItem[] = [];
       
+      // 配置情報がないアイテムを取得
+      const layoutItemKeys = new Set(metadata.layoutInfo!.map(layout => layout.itemKey));
+      const otherItems = newItems.filter(item => !layoutItemKeys.has(getItemKey(item)));
+      
+      // 配置情報がないアイテムを参加日ごとに分類
+      const otherItemsByDate: Record<string, ShoppingItem[]> = {};
+      otherItems.forEach(item => {
+        if (!otherItemsByDate[item.eventDate]) {
+          otherItemsByDate[item.eventDate] = [];
+        }
+        otherItemsByDate[item.eventDate].push(item);
+      });
+      
       eventDatesForLayout.forEach(eventDate => {
         // 実行列のアイテム
         const executeItemsForDate = metadata.layoutInfo!
@@ -172,18 +185,18 @@ const App: React.FC = () => {
         // 実行列のIDを保存
         newExecuteModeItems[eventDate] = executeItemsForDate.map(item => item.id);
         
-        // 実行列、候補リストの順で並べる
-        sortedItemsByDate.push(...executeItemsForDate, ...candidateItemsForDate);
+        // 実行列、候補リスト、配置情報がないアイテムの順で並べる
+        sortedItemsByDate.push(...executeItemsForDate, ...candidateItemsForDate, ...(otherItemsByDate[eventDate] || []));
       });
       
-      // 配置情報がないアイテムを追加
-      const layoutItemKeys = new Set(metadata.layoutInfo!.map(layout => layout.itemKey));
-      const otherItems = newItems.filter(item => !layoutItemKeys.has(getItemKey(item)));
+      // 配置情報がないアイテムで、参加日がeventDatesForLayoutに含まれていないものを追加
+      const otherItemsWithoutDate = otherItems.filter(item => !eventDatesForLayout.includes(item.eventDate));
+      sortedItemsByDate.push(...otherItemsWithoutDate);
       
       setEventLists(prevLists => {
         return {
           ...prevLists,
-          [eventName]: [...sortedItemsByDate, ...otherItems] as ShoppingItem[]
+          [eventName]: sortedItemsByDate as ShoppingItem[]
         };
       });
       
@@ -968,14 +981,15 @@ const App: React.FC = () => {
 
     const csvRows: string[] = [];
 
-    // メタデータ行: スプレッドシートURL
+    // ヘッダー行を最初に出力
+    const headers = ['サークル名', '参加日', 'ブロック', 'ナンバー', 'タイトル', '頒布価格', '購入状態', '備考', '列の種類', '列内順番'];
+    csvRows.push(headers.join(','));
+
+    // メタデータ行: スプレッドシートURL（コメント行として最後に出力）
     const metadata = eventMetadata[eventName];
     if (metadata?.spreadsheetUrl) {
       csvRows.push(`#METADATA,spreadsheetUrl,${escapeCsvCell(metadata.spreadsheetUrl)}`);
     }
-
-    const headers = ['サークル名', '参加日', 'ブロック', 'ナンバー', 'タイトル', '頒布価格', '購入状態', '備考', '列の種類', '列内順番'];
-    csvRows.push(headers.join(','));
 
     // 各参加日ごとに配置情報を保持してエクスポート
     const eventDatesForExport = extractEventDates(itemsToExport);
