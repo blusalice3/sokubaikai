@@ -1,5 +1,5 @@
 {
-  "name": "Event Shopping Planner",
+  "name": "junkai",
   "short_name": "EventPlanner",
   "description": "即売会での購入リストを管理するアプリ",
   "start_url": "/",
@@ -22,4 +22,5 @@
       "purpose": "any maskable"
     }
   ]
+
 }
